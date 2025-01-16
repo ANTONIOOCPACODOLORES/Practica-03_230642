@@ -1,59 +1,85 @@
 const express = require("express");
 const session = require("express-session");
+const req = require("express/lib/request");
+const res = require("express/lib/response");
+const moment = require("moment-timezone");
 
 const app = express();
 
 // Configuración de la sesión
 app.use(session({
-    secret: "mi-clave-secreta",
-    resave: false,
+    secret: "p3-AOD_P@$$W0rd25-sesionespersistentes",
+    resave: false, //no resguardar la ssion si no ha sido modificada
     saveUninitialized: true, // Corrección en el nombre de la propiedad
-    cookie: { secure: false }
+    cookie: { secure: false, maxAge:24*60*60*1000 } //usar secure : true solo si usas HTTPS, maxAge: definir la duracion maxima de la sesion
 }));
 
 // Middleware para mostrar detalles de la sesión
-app.use((req, res, next) => {
-    if (req.session) {
-        if (!req.session.createdAt) {
-            req.session.createdAt = new Date(); // Asignamos la fecha de creación de la sesión
-        }
-        req.session.lastAccess = new Date(); // Actualiza el último acceso
+app.get('/login/'),(req,res) => {
+    if (!req.session.createdAt) {
+        req.session.createdAt = new Date(); // Asignamos la fecha de creación de la sesión
+        req.session.createdAt = new Date()
+        res.send('La sesion ha sido iniciada');
+        
+    }else{
+        res.send('Ya existe una sesion');
     }
-    next();
-});
+};
 
 // Ruta para mostrar la información de la sesión
-app.get('/session', (req, res) => {
-    if (req.session) {
-        const sessionID = req.session.id;
-        const createdAt = req.session.createdAt;
-        const lastAccess = req.session.lastAccess;
-        const sessionDuration = Math.floor((new Date() - new Date(createdAt)) / 1000); // Corrección de cálculo de duración
-        
-
-        res.send(`
-            <h1>Detalles de la sesión</h1>
-            <p><strong>ID de Sesión:</strong> ${sessionID}</p>
-            <p><strong>Fecha de creación de la sesión:</strong> ${createdAt}</p>
-            <p><strong>Último acceso:</strong> ${lastAccess}</p>
-            <p><strong>Duración de la sesión (en segundos):</strong> ${sessionDuration}</p>
-        `);
-    } else {
-        res.send('<h1>No hay sesión activa aún.</h1>');
+app.get('/update', (req, res) => {
+    if (req.session.createdAt) {
+        req.session.lastAccess=new Date();
+res.send('La fecha de ultimo acceso ha sido actualizada');
+    }else{
+        res.send('No hay una sesion activa');
     }
 });
 
-// Ruta para cerrar la sesión
+//ruta para obtener el estado de la sesion
+app.get('/status', (req,res)=>{
+    if  (req.session.createdAt){
+        const now = new Date();
+        const started = new Date (req.session.createdAt);
+        const lastUpdate = new Date (req.session.lastAccess);
+
+        //Calcular la antiguedad de la sesion
+        const sesionAgeMs = now - started;
+        const hours = Math.floor(sesionAgeMs/(1000*60*60));
+        const minutes = Math.floor((sesionAgeMs % (1000 * 60 * 60))/(1000*60));
+        const seconds =Math.floor((sesionAgeMs % (1000 * 60))/ 1000);
+
+        //Convertir las fechas al uso horario CDMX
+        const inicioCDMX = moment (inicio).tz('America/Mexico_City').format('YYYY-MM-DD HH:mm:ss');
+        const ultimoAccesoCDMX = moment (ultimoAcceso).tz('America/Mexico_City').format('YYYY-MM-DD HH:mm:ss');   
+        
+        res.json({
+            inicioCDMX,
+            ultimoAccesoCDMX,
+            antiguedad: { horas: hours, minutos: minutes, segundos: seconds },
+        });
+    } else {
+        res.status(404).json({ error: 'Sesión no encontrada.' });
+    }
+});
+
+
+// Ruta para cerrar sesión
 app.get('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.send('Error al cerrar la sesión.');
-        }
-        res.send('<h1>Sesión cerrada exitosamente.</h1>');
-    });
+    if (req.session.createdAt){
+        req.session.destroy((err)=>{
+            if (err){
+                return res.status(500).send('Error al cerra la sesion');
+            }
+            res.send('Sesiion cerrada correctamente.');
+        });
+    }else{
+        res.send('No hay una sesion activa para cerrar.');
+    }
 });
 
 // Iniciar el servidor en el puerto 3000
-app.listen(3000, () => {
-    console.log('Servidor corriendo en el puerto 3000');
+const port = 3000;
+app.listen(port, ()=>{
+    console.log(`servidor iniciando en http://localhost:${Port}`);
 });
