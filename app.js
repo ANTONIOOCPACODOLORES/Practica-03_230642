@@ -59,6 +59,31 @@ app.get('/status', (req, res) => {
     }
 });
 
+// Ruta para mostrar la información de la sesión
+app.get('/session', (req, res) => {
+    if (req.session) {
+        const sessionId = req.session.id;
+        const createdAt = req.session.createdAt;
+        const lastAccess = req.session.lastAccess;
+        const sessionDuration = Math.floor((new Date() - new Date(req.session.createdAt)) / 1000); // Duración de la sesión en segundos
+
+        console.log('ID de sesión:', sessionId);
+        console.log('Fecha de creación de la sesión:', createdAt);
+        console.log('Último acceso:', lastAccess);
+        console.log('Duración de la sesión (en segundos):', sessionDuration);
+
+        // Devolver la información al cliente en formato JSON
+        res.json({
+            sessionId,
+            createdAt,
+            lastAccess,
+            sessionDuration
+        });
+    } else {
+        res.status(404).json({ error: 'No hay una sesión activa.' });
+    }
+});
+
 // Ruta para cerrar sesión
 app.get('/logout', (req, res) => {
     if (req.session.createdAt) {
@@ -78,3 +103,4 @@ const port = 3000;
 app.listen(port, () => {
     console.log(`Servidor iniciando en el puerto:${port}`);
 });
+
